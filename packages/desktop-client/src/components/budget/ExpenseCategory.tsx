@@ -27,6 +27,8 @@ import type {
 } from '@desktop-client/components/sort';
 import { Row } from '@desktop-client/components/table';
 import { useDragRef } from '@desktop-client/hooks/useDragRef';
+import { useFeatureFlag } from '@desktop-client/hooks/useFeatureFlag';
+import { useGlobalPref } from '@desktop-client/hooks/useGlobalPref';
 
 type ExpenseCategoryProps = {
   cat: CategoryEntity;
@@ -41,6 +43,7 @@ type ExpenseCategoryProps = {
   onBudgetAction: (month: string, action: string, arg: unknown) => void;
   onShowActivity: (id: CategoryEntity['id'], month: string) => void;
   onReorder: OnDropCallback;
+  isLast?: boolean;
 };
 
 export function ExpenseCategory({
@@ -56,12 +59,17 @@ export function ExpenseCategory({
   onShowActivity,
   onDragChange,
   onReorder,
+  isLast,
 }: ExpenseCategoryProps) {
   let dragging = dragState && dragState.item === cat;
 
   if (dragState && dragState.item.id === cat.group) {
     dragging = true;
   }
+
+  const progressBarEnabled = useFeatureFlag('progressBar');
+  const [showProgressBarsPref] = useGlobalPref('showProgressBars');
+  const showProgressBars = progressBarEnabled && showProgressBarsPref !== false;
 
   const { dragRef } = useDraggable({
     type: 'category',
@@ -84,6 +92,7 @@ export function ExpenseCategory({
       innerRef={dropRef}
       collapsed
       style={{
+        ...(showProgressBars && { height: 'auto', flex: '0 0 auto' }),
         backgroundColor: theme.budgetCurrentMonth,
         opacity: cat.hidden || categoryGroup?.hidden ? 0.5 : undefined,
       }}
@@ -105,6 +114,7 @@ export function ExpenseCategory({
           onEditName={onEditName}
           onSave={onSave}
           onDelete={onDelete}
+          inputCellStyle={showProgressBars ? undefined : { paddingBottom: 0 }}
         />
 
         <RenderMonths>
@@ -120,6 +130,7 @@ export function ExpenseCategory({
               onEdit={onEditMonth}
               onBudgetAction={onBudgetAction}
               onShowActivity={onShowActivity}
+              isLast={isLast}
             />
           )}
         </RenderMonths>

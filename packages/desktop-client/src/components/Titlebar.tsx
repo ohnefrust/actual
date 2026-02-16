@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Trans, useTranslation } from 'react-i18next';
-import { Route, Routes, useLocation } from 'react-router';
+import { Route, Routes, useLocation, useMatch } from 'react-router';
 
 import { Button } from '@actual-app/components/button';
 import { useResponsive } from '@actual-app/components/hooks/useResponsive';
-import { SvgArrowLeft } from '@actual-app/components/icons/v1';
+import { SvgArrowLeft, SvgChartBar } from '@actual-app/components/icons/v1';
 import {
   SvgAlertTriangle,
   SvgNavigationMenu,
@@ -35,6 +35,7 @@ import { useSidebar } from './sidebar/SidebarProvider';
 import { ThemeSelector } from './ThemeSelector';
 
 import { sync } from '@desktop-client/app/appSlice';
+import { useFeatureFlag } from '@desktop-client/hooks/useFeatureFlag';
 import { useGlobalPref } from '@desktop-client/hooks/useGlobalPref';
 import { useIsTestEnv } from '@desktop-client/hooks/useIsTestEnv';
 import { useMetadataPref } from '@desktop-client/hooks/useMetadataPref';
@@ -102,6 +103,33 @@ function PrivacyButton({ style }: PrivacyButtonProps) {
       ) : (
         <SvgViewShow style={privacyIconStyle} />
       )}
+    </Button>
+  );
+}
+
+type StatusBarsButtonProps = {
+  style?: CSSProperties;
+};
+
+function StatusBarsButton({ style }: StatusBarsButtonProps) {
+  const { t } = useTranslation();
+  const progressBarEnabled = useFeatureFlag('progressBar');
+  const [showProgressBarsPref, setShowProgressBarsPref] =
+    useGlobalPref('showProgressBars');
+  const showProgressBars = showProgressBarsPref !== false;
+
+  if (!progressBarEnabled) return null;
+
+  return (
+    <Button
+      variant="bare"
+      aria-label={
+        showProgressBars ? t('Hide status bars') : t('Show status bars')
+      }
+      onPress={() => setShowProgressBarsPref(!showProgressBars)}
+      style={style}
+    >
+      <SvgChartBar style={{ width: 15, height: 15 }} />
     </Button>
   );
 }
@@ -279,6 +307,7 @@ export function Titlebar({ style }: TitlebarProps) {
   const serverURL = useServerURL();
   const [floatingSidebar] = useGlobalPref('floatingSidebar');
   const isTestEnv = useIsTestEnv();
+  const isBudgetPage = useMatch('/budget');
 
   return isNarrowWidth ? null : (
     <View
@@ -345,6 +374,7 @@ export function Titlebar({ style }: TitlebarProps) {
       <SpaceBetween gap={10}>
         <UncategorizedButton />
         {isDevelopmentEnvironment() && !isTestEnv && <ThemeSelector />}
+        {isBudgetPage && <StatusBarsButton />}
         <PrivacyButton />
         {serverURL ? <SyncButton /> : null}
         <LoggedInUser />

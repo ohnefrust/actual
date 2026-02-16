@@ -32,6 +32,7 @@ type SidebarCategoryProps = {
   style?: CSSProperties;
   borderColor?: string;
   isLast?: boolean;
+  inputCellStyle?: CSSProperties;
   onEditName: (id: CategoryEntity['id']) => void;
   onSave: (category: CategoryEntity) => void;
   onHideNewCategory?: () => void;
@@ -55,7 +56,8 @@ export function SidebarCategory({
   editing,
   goalsShown = false,
   style,
-  isLast,
+  isLast: _isLast,
+  inputCellStyle,
   onEditName,
   onSave,
   onDelete,
@@ -193,7 +195,7 @@ export function SidebarCategory({
           }
         }}
         onBlur={() => onEditName(null)}
-        style={{ paddingLeft: 13, ...(isLast && { borderBottomWidth: 0 }) }}
+        style={{ paddingLeft: 13, paddingBottom: 12, ...inputCellStyle }}
         inputProps={{
           placeholder: temporary ? t('New category name') : '',
         }}

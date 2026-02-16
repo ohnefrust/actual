@@ -11,6 +11,7 @@ const DEFAULT_FEATURE_FLAG_STATE: Record<FeatureFlag, boolean> = {
   crossoverReport: false,
   customThemes: false,
   budgetAnalysisReport: false,
+  progressBar: false,
 };
 
 export function useFeatureFlag(name: FeatureFlag): boolean {
