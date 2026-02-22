@@ -113,7 +113,7 @@ type StatusBarsButtonProps = {
 
 function StatusBarsButton({ style }: StatusBarsButtonProps) {
   const { t } = useTranslation();
-  const progressBarEnabled = useFeatureFlag('progressBar');
+  const progressBarEnabled = useFeatureFlag('goalTemplatesEnabled');
   const [showProgressBarsPref, setShowProgressBarsPref] =
     useGlobalPref('showProgressBars');
   const showProgressBars = showProgressBarsPref !== false;

@@ -391,7 +391,7 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
     budgetedAmount < templateAmount &&
     spentAmount <= budgetedAmount;
 
-  const progressBarEnabled = useFeatureFlag('progressBar');
+  const progressBarEnabled = useFeatureFlag('goalTemplatesEnabled');
   const [showProgressBarsPref] = useGlobalPref('showProgressBars');
   const showProgressBars = progressBarEnabled && showProgressBarsPref !== false;
   const rowCellStyle = showProgressBars ? { borderBottomWidth: 0 } : null;

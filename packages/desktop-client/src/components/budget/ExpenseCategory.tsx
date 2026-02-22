@@ -67,7 +67,7 @@ export function ExpenseCategory({
     dragging = true;
   }
 
-  const progressBarEnabled = useFeatureFlag('progressBar');
+  const progressBarEnabled = useFeatureFlag('goalTemplatesEnabled');
   const [showProgressBarsPref] = useGlobalPref('showProgressBars');
   const showProgressBars = progressBarEnabled && showProgressBarsPref !== false;
   const rowHeight = showProgressBars ? ROW_HEIGHT + 10 : undefined;

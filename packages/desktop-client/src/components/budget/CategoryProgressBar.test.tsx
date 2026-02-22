@@ -228,7 +228,7 @@ describe('computeCategoryProgress', () => {
 });
 
 describe('CategoryProgressBar rendering', () => {
-  it('does not render when progressBar feature flag is disabled', () => {
+  it('does not render when goalTemplatesEnabled feature flag is disabled', () => {
     vi.mocked(useFeatureFlag).mockReturnValue(false);
     const { container } = render(
       <CategoryProgressBar assigned={10000} activity={-3000} balance={7000} />,
@@ -236,11 +236,19 @@ describe('CategoryProgressBar rendering', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders when progressBar feature flag is enabled', () => {
+  it('renders when goalTemplatesEnabled feature flag is enabled', () => {
     vi.mocked(useFeatureFlag).mockReturnValue(true);
     const { container } = render(
       <CategoryProgressBar assigned={10000} activity={-3000} balance={7000} />,
     );
     expect(container.firstChild).not.toBeNull();
+  });
+
+  it('checks the goalTemplatesEnabled feature flag', () => {
+    vi.mocked(useFeatureFlag).mockReturnValue(false);
+    render(
+      <CategoryProgressBar assigned={10000} activity={-3000} balance={7000} />,
+    );
+    expect(useFeatureFlag).toHaveBeenCalledWith('goalTemplatesEnabled');
   });
 });

@@ -129,7 +129,7 @@ export function CategoryProgressBar({
   balance,
   template,
 }: CategoryProgressBarProps) {
-  const progressBarEnabled = useFeatureFlag('progressBar');
+  const progressBarEnabled = useFeatureFlag('goalTemplatesEnabled');
   const format = useFormat();
 
   const progress = useMemo(

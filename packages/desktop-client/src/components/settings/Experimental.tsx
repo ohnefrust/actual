@@ -215,9 +215,6 @@ export function ExperimentalFeatures() {
             >
               <Trans>Budget Analysis Report</Trans>
             </FeatureToggle>
-            <FeatureToggle flag="progressBar">
-              <Trans>Budget Progress Bars</Trans>
-            </FeatureToggle>
             {showServerPrefs && (
               <ServerFeatureToggle
                 prefName="flags.plugins"
