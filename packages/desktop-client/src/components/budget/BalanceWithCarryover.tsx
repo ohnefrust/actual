@@ -95,6 +95,7 @@ type BalanceWithCarryoverProps = Omit<
   goal: Binding<'envelope-budget' | 'tracking-budget', 'goal'>;
   budgeted: Binding<'envelope-budget' | 'tracking-budget', 'budget'>;
   longGoal: Binding<'envelope-budget' | 'tracking-budget', 'long-goal'>;
+  balanceColorOverride?: string | null;
   isDisabled?: boolean;
   shouldInlineGoalStatus?: boolean;
   CarryoverIndicator?: ComponentType<CarryoverIndicatorProps>;
@@ -107,6 +108,7 @@ export function BalanceWithCarryover({
   goal,
   budgeted,
   longGoal,
+  balanceColorOverride,
   isDisabled,
   shouldInlineGoalStatus,
   CarryoverIndicator: CarryoverIndicatorComponent = CarryoverIndicator,
@@ -122,13 +124,23 @@ export function BalanceWithCarryover({
   const longGoalValue = useSheetValue(longGoal);
   const isGoalTemplatesEnabled = useFeatureFlag('goalTemplatesEnabled');
   const getBalanceAmountStyle = useCallback(
-    (balanceValue: number) =>
-      makeBalanceAmountStyle(
+    (balanceValue: number) => {
+      if (balanceColorOverride && balanceValue >= 0) {
+        return { color: balanceColorOverride };
+      }
+      return makeBalanceAmountStyle(
         balanceValue,
         isGoalTemplatesEnabled ? goalValue : null,
         longGoalValue === 1 ? balanceValue : budgetedValue,
-      ),
-    [budgetedValue, goalValue, isGoalTemplatesEnabled, longGoalValue],
+      );
+    },
+    [
+      balanceColorOverride,
+      budgetedValue,
+      goalValue,
+      isGoalTemplatesEnabled,
+      longGoalValue,
+    ],
   );
   const format = useFormat();
 

@@ -24,9 +24,9 @@ describe('computeCategoryProgress', () => {
         balance: 7000,
       });
 
-      expect(result.state).toBe('within-budget');
+      expect(result.state).toBe('funded');
       expect(result.baselineAmount).toBe(10000);
-      expect(result.progressRatio).toBeCloseTo(0.3);
+      expect(result.spentRatio).toBeCloseTo(0.3);
       expect(result.overflowRatio).toBe(0);
     });
 
@@ -37,9 +37,9 @@ describe('computeCategoryProgress', () => {
         balance: 10000,
       });
 
-      expect(result.state).toBe('within-budget');
+      expect(result.state).toBe('funded');
       expect(result.baselineAmount).toBe(10000);
-      expect(result.progressRatio).toBe(0);
+      expect(result.spentRatio).toBe(0);
       expect(result.overflowRatio).toBe(0);
     });
   });
@@ -52,9 +52,9 @@ describe('computeCategoryProgress', () => {
         balance: 0,
       });
 
-      expect(result.state).toBe('within-budget');
+      expect(result.state).toBe('funded');
       expect(result.baselineAmount).toBe(10000);
-      expect(result.progressRatio).toBe(1.0);
+      expect(result.spentRatio).toBe(1.0);
       expect(result.overflowRatio).toBe(0);
     });
   });
@@ -69,7 +69,7 @@ describe('computeCategoryProgress', () => {
 
       expect(result.state).toBe('over-budget');
       expect(result.baselineAmount).toBe(10000);
-      expect(result.progressRatio).toBe(1.0);
+      expect(result.spentRatio).toBe(1.0);
       expect(result.overflowRatio).toBeCloseTo(0.2);
     });
 
@@ -81,7 +81,7 @@ describe('computeCategoryProgress', () => {
       });
 
       expect(result.state).toBe('over-budget');
-      expect(result.progressRatio).toBe(1.0);
+      expect(result.spentRatio).toBe(1.0);
       expect(result.overflowRatio).toBeCloseTo(3.0);
     });
   });
@@ -94,9 +94,9 @@ describe('computeCategoryProgress', () => {
         balance: 0,
       });
 
-      expect(result.state).toBe('within-budget');
+      expect(result.state).toBe('funded');
       expect(result.baselineAmount).toBe(0);
-      expect(result.progressRatio).toBe(0);
+      expect(result.spentRatio).toBe(0);
       expect(result.overflowRatio).toBe(0);
     });
 
@@ -109,7 +109,7 @@ describe('computeCategoryProgress', () => {
 
       expect(result.state).toBe('over-budget');
       expect(result.baselineAmount).toBe(500);
-      expect(result.progressRatio).toBe(1.0);
+      expect(result.spentRatio).toBe(1.0);
       expect(result.overflowRatio).toBe(0);
     });
   });
@@ -122,7 +122,7 @@ describe('computeCategoryProgress', () => {
         balance: -10000,
       });
 
-      expect(result.state).toBe('within-budget');
+      expect(result.state).toBe('funded');
       expect(result.baselineAmount).toBe(0);
     });
 
@@ -133,8 +133,8 @@ describe('computeCategoryProgress', () => {
         balance: 0,
       });
 
-      expect(result.state).toBe('within-budget');
-      expect(result.progressRatio).toBe(0);
+      expect(result.state).toBe('funded');
+      expect(result.spentRatio).toBe(0);
       expect(result.overflowRatio).toBe(0);
     });
 
@@ -167,7 +167,7 @@ describe('computeCategoryProgress', () => {
 
       expect(result.state).toBe('over-budget');
       expect(result.baselineAmount).toBe(2000);
-      expect(result.progressRatio).toBe(1.0);
+      expect(result.spentRatio).toBe(1.0);
       expect(result.remaining).toBe(-2000);
     });
 
@@ -178,8 +178,51 @@ describe('computeCategoryProgress', () => {
         balance: 4000,
       });
 
-      expect(result.state).toBe('within-budget');
+      expect(result.state).toBe('funded');
       expect(result.remaining).toBe(4000);
+    });
+  });
+
+  describe('template-aware scenarios', () => {
+    it('should be underfunded when assigned < template and not overspent', () => {
+      const result = computeCategoryProgress({
+        assigned: 20000,
+        activity: -14000,
+        balance: 6000,
+        template: 25000,
+      });
+
+      expect(result.state).toBe('underfunded');
+      expect(result.baselineAmount).toBe(25000);
+      expect(result.budgetedRatio).toBeCloseTo(0.8);
+      expect(result.spentRatio).toBeCloseTo(0.56);
+    });
+
+    it('should be funded when assigned >= template', () => {
+      const result = computeCategoryProgress({
+        assigned: 26000,
+        activity: -14000,
+        balance: 12000,
+        template: 25000,
+      });
+
+      expect(result.state).toBe('funded');
+      expect(result.baselineAmount).toBe(25000);
+      expect(result.budgetedRatio).toBeCloseTo(1);
+    });
+
+    it('should ignore template when overspent', () => {
+      const result = computeCategoryProgress({
+        assigned: 20000,
+        activity: -22000,
+        balance: -2000,
+        template: 30000,
+      });
+
+      expect(result.state).toBe('over-budget');
+      expect(result.baselineAmount).toBe(20000);
+      expect(result.spentRatio).toBe(1.0);
+      expect(result.overflowRatio).toBeCloseTo(0.1);
     });
   });
 });

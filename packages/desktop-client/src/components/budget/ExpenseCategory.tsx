@@ -25,7 +25,7 @@ import type {
   OnDragChangeCallback,
   OnDropCallback,
 } from '@desktop-client/components/sort';
-import { Row } from '@desktop-client/components/table';
+import { ROW_HEIGHT, Row } from '@desktop-client/components/table';
 import { useDragRef } from '@desktop-client/hooks/useDragRef';
 import { useFeatureFlag } from '@desktop-client/hooks/useFeatureFlag';
 import { useGlobalPref } from '@desktop-client/hooks/useGlobalPref';
@@ -70,6 +70,7 @@ export function ExpenseCategory({
   const progressBarEnabled = useFeatureFlag('progressBar');
   const [showProgressBarsPref] = useGlobalPref('showProgressBars');
   const showProgressBars = progressBarEnabled && showProgressBarsPref !== false;
+  const rowHeight = showProgressBars ? ROW_HEIGHT + 10 : undefined;
 
   const { dragRef } = useDraggable({
     type: 'category',
@@ -90,9 +91,10 @@ export function ExpenseCategory({
   return (
     <Row
       innerRef={dropRef}
+      height={rowHeight}
       collapsed
       style={{
-        ...(showProgressBars && { height: 'auto', flex: '0 0 auto' }),
+        ...(showProgressBars && { flex: '0 0 auto' }),
         backgroundColor: theme.budgetCurrentMonth,
         opacity: cat.hidden || categoryGroup?.hidden ? 0.5 : undefined,
       }}
@@ -114,7 +116,11 @@ export function ExpenseCategory({
           onEditName={onEditName}
           onSave={onSave}
           onDelete={onDelete}
-          inputCellStyle={showProgressBars ? undefined : { paddingBottom: 0 }}
+          inputCellStyle={
+            showProgressBars
+              ? { paddingBottom: 0, paddingTop: 0 }
+              : { paddingBottom: 0 }
+          }
         />
 
         <RenderMonths>

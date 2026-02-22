@@ -36,7 +36,8 @@ import {
 } from '@desktop-client/components/spreadsheet/CellValue';
 import {
   Field,
- InputCell, Row,
+  InputCell,
+  Row,
   ROW_HEIGHT,
   SheetCell,
 } from '@desktop-client/components/table';
@@ -98,9 +99,10 @@ const cellStyle: CSSProperties = {
 type TemplateAmountCellProps = {
   value: number | null;
   onSave: (value: number | null) => void;
+  style?: CSSProperties;
 };
 
-function TemplateAmountCell({ value, onSave }: TemplateAmountCellProps) {
+function TemplateAmountCell({ value, onSave, style }: TemplateAmountCellProps) {
   const [editing, setEditing] = useState(false);
   const format = useFormat();
 
@@ -148,7 +150,7 @@ function TemplateAmountCell({ value, onSave }: TemplateAmountCellProps) {
           backgroundColor: theme.budgetCurrentMonth,
         },
       }}
-      style={{ ...styles.tnum }}
+      style={{ ...styles.tnum, ...(style || null) }}
     />
   );
 }
@@ -375,20 +377,31 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
 
   const showScheduleIndicator = schedule && scheduleStatus;
 
-  // Read goal-related bindings for progress bar
+  // Read bindings for progress bar
   const budgeted = useEnvelopeSheetValue(
     envelopeBudget.catBudgeted(category.id),
   );
   const spent = useEnvelopeSheetValue(envelopeBudget.catSumAmount(category.id));
   const balance = useEnvelopeSheetValue(envelopeBudget.catBalance(category.id));
-  const _goal = useEnvelopeSheetValue(envelopeBudget.catGoal(category.id));
-  const _longGoal = useEnvelopeSheetValue(
-    envelopeBudget.catLongGoal(category.id),
-  );
+  const budgetedAmount = budgeted ?? 0;
+  const spentAmount = Math.abs(spent ?? 0);
+  const templateAmount = templateValue ?? 0;
+  const isUnderfunded =
+    templateAmount > 0 &&
+    budgetedAmount < templateAmount &&
+    spentAmount <= budgetedAmount;
 
   const progressBarEnabled = useFeatureFlag('progressBar');
   const [showProgressBarsPref] = useGlobalPref('showProgressBars');
   const showProgressBars = progressBarEnabled && showProgressBarsPref !== false;
+  const rowCellStyle = showProgressBars ? { borderBottomWidth: 0 } : null;
+  const rowContainerStyle = showProgressBars
+    ? ({
+        flexDirection: 'row',
+        flex: `0 0 ${ROW_HEIGHT}px`,
+        height: ROW_HEIGHT,
+      } as const)
+    : ({ flex: 1, flexDirection: 'row' } as const);
 
   return (
     <View
@@ -419,7 +432,8 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
         },
       }}
     >
-      {isGoalTemplatesEnabled && (
+      <View style={rowContainerStyle}>
+        {isGoalTemplatesEnabled && (
         <TemplateAmountCell
           value={templateValue}
           onSave={amount => {
@@ -431,19 +445,20 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
               message: t('Template updated.'),
             });
           }}
+          style={rowCellStyle || undefined}
         />
       )}
-      <View
-        ref={budgetMenuTriggerRef}
-        style={{
-          flex: 1,
-          flexDirection: 'row',
-        }}
-        onContextMenu={e => {
-          if (editing) return;
-          handleBudgetContextMenu(e);
-        }}
-      >
+        <View
+          ref={budgetMenuTriggerRef}
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+          }}
+          onContextMenu={e => {
+            if (editing) return;
+            handleBudgetContextMenu(e);
+          }}
+        >
         {!editing && (
           <View
             className={`hover-expand ${budgetMenuOpen ? 'force-visible' : ''}`}
@@ -454,7 +469,7 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
               alignItems: 'center',
               justifyContent: 'center',
               borderTopWidth: 1,
-              borderBottomWidth: 1,
+              borderBottomWidth: showProgressBars ? 0 : 1,
               borderColor: theme.tableBorder,
             }}
           >
@@ -531,7 +546,11 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
           focused={editing}
           width="flex"
           onExpose={() => onEdit(category.id, month)}
-          style={{ ...(editing && { zIndex: 100 }), ...styles.tnum }}
+          style={{
+            ...(editing && { zIndex: 100 }),
+            ...styles.tnum,
+            ...(rowCellStyle || null),
+          }}
           textAlign="right"
           valueStyle={{
             cursor: 'default',
@@ -566,7 +585,11 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
           }}
         />
       </View>
-      <Field name="spent" width="flex" style={{ textAlign: 'right' }}>
+      <Field
+        name="spent"
+        width="flex"
+        style={{ textAlign: 'right', ...(rowCellStyle || null) }}
+      >
         <View
           data-testid="category-month-spent"
           onClick={() => onShowActivity(category.id, month)}
@@ -626,7 +649,11 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
         ref={balanceMenuTriggerRef}
         name="balance"
         width="flex"
-        style={{ paddingRight: styles.monthRightPadding, textAlign: 'right' }}
+        style={{
+          paddingRight: styles.monthRightPadding,
+          textAlign: 'right',
+          ...(rowCellStyle || null),
+        }}
       >
         <Button
           variant="bare"
@@ -656,6 +683,9 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
             goal={envelopeBudget.catGoal(category.id)}
             budgeted={envelopeBudget.catBudgeted(category.id)}
             longGoal={envelopeBudget.catLongGoal(category.id)}
+            balanceColorOverride={
+              isUnderfunded ? theme.templateNumberUnderFunded : null
+            }
             tooltipDisabled={balanceMenuOpen}
           />
         </Button>
@@ -677,6 +707,24 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
           />
         </Popover>
       </Field>
+      </View>
+      {showProgressBars && (
+        <View
+          style={{
+            paddingRight: styles.monthRightPadding,
+            paddingLeft: 5,
+            paddingTop: 2,
+            paddingBottom: 4,
+          }}
+        >
+          <CategoryProgressBar
+            assigned={budgeted ?? 0}
+            activity={spent ?? 0}
+            balance={balance ?? 0}
+            template={templateAmount}
+          />
+        </View>
+      )}
     </View>
   );
 });
