@@ -242,9 +242,11 @@ export const BudgetCategories = memo<BudgetCategoriesProps>(
         style={{
           marginBottom: 10,
           backgroundColor: theme.budgetCurrentMonth, // match budget colors, not generic table colors.
-          overflow: 'hidden',
           boxShadow: styles.cardShadow,
           borderRadius: '0 0 4px 4px',
+          borderColor: theme.tableBorder,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.tableBorder,
           flex: 1,
         }}
       >
@@ -315,6 +317,7 @@ export const BudgetCategories = memo<BudgetCategoriesProps>(
                   categoryGroup={item.group}
                   editingCell={editingCell}
                   dragState={dragState}
+                  isLast={idx === items.length - 1}
                   onEditName={onEditName}
                   onEditMonth={onEditMonth}
                   onSave={_onSaveCategory}

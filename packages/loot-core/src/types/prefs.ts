@@ -6,7 +6,8 @@ export type FeatureFlag =
   | 'currency'
   | 'crossoverReport'
   | 'customThemes'
-  | 'budgetAnalysisReport';
+  | 'budgetAnalysisReport'
+  | 'progressBar';
 
 /**
  * Cross-device preferences. These sync across devices when they are changed.
@@ -126,6 +127,7 @@ export type GlobalPrefs = Partial<{
     port?: number;
   };
   notifyWhenUpdateIsAvailable: boolean;
+  showProgressBars: boolean;
 }>;
 
 // GlobalPrefsJson represents what's saved in the global-store.json file

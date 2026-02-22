@@ -10,6 +10,7 @@ type TooltipProps = Partial<ComponentProps<typeof AriaTooltip>> & {
   content: ReactNode;
   triggerProps?: Partial<ComponentProps<typeof TooltipTrigger>>;
   disablePointerEvents?: boolean;
+  wrapperStyle?: React.CSSProperties;
 };
 
 export const Tooltip = ({
@@ -17,6 +18,7 @@ export const Tooltip = ({
   content,
   triggerProps = {},
   disablePointerEvents = false,
+  wrapperStyle,
   ...props
 }: TooltipProps) => {
   const triggerRef = useRef(null);
@@ -54,7 +56,12 @@ export const Tooltip = ({
 
   return (
     <View
-      style={{ minHeight: 'auto', flexShrink: 0, maxWidth: '100%' }}
+      style={{
+        minHeight: 'auto',
+        flexShrink: 0,
+        maxWidth: '100%',
+        ...wrapperStyle,
+      }}
       ref={triggerRef}
       onMouseEnter={handlePointerEnter}
       onMouseLeave={handlePointerLeave}

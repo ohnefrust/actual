@@ -78,6 +78,7 @@ export function IncomeCategory({
         innerRef={handleDragRef}
         category={cat}
         isLast={isLast}
+        inputCellStyle={{ paddingBottom: 0 }}
         editing={
           editingCell &&
           editingCell.cell === 'name' &&
