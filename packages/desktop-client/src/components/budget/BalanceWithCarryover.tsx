@@ -95,6 +95,7 @@ type BalanceWithCarryoverProps = Omit<
   goal: Binding<'envelope-budget' | 'tracking-budget', 'goal'>;
   budgeted: Binding<'envelope-budget' | 'tracking-budget', 'budget'>;
   longGoal: Binding<'envelope-budget' | 'tracking-budget', 'long-goal'>;
+  goalOverride?: number | null;
   balanceColorOverride?: string | null;
   isDisabled?: boolean;
   shouldInlineGoalStatus?: boolean;
@@ -108,6 +109,7 @@ export function BalanceWithCarryover({
   goal,
   budgeted,
   longGoal,
+  goalOverride,
   balanceColorOverride,
   isDisabled,
   shouldInlineGoalStatus,
@@ -123,6 +125,8 @@ export function BalanceWithCarryover({
   const budgetedValue = useSheetValue(budgeted);
   const longGoalValue = useSheetValue(longGoal);
   const isGoalTemplatesEnabled = useFeatureFlag('goalTemplatesEnabled');
+  const resolvedGoalValue =
+    goalOverride != null && isGoalTemplatesEnabled ? goalOverride : goalValue;
   const getBalanceAmountStyle = useCallback(
     (balanceValue: number) => {
       if (balanceColorOverride && balanceValue >= 0) {
@@ -130,14 +134,14 @@ export function BalanceWithCarryover({
       }
       return makeBalanceAmountStyle(
         balanceValue,
-        isGoalTemplatesEnabled ? goalValue : null,
+        isGoalTemplatesEnabled ? resolvedGoalValue : null,
         longGoalValue === 1 ? balanceValue : budgetedValue,
       );
     },
     [
       balanceColorOverride,
       budgetedValue,
-      goalValue,
+      resolvedGoalValue,
       isGoalTemplatesEnabled,
       longGoalValue,
     ],
@@ -147,9 +151,9 @@ export function BalanceWithCarryover({
   const getDifferenceToGoal = useCallback(
     (balanceValue: number) =>
       longGoalValue === 1
-        ? balanceValue - goalValue
-        : budgetedValue - goalValue,
-    [budgetedValue, goalValue, longGoalValue],
+        ? balanceValue - resolvedGoalValue
+        : budgetedValue - resolvedGoalValue,
+    [budgetedValue, resolvedGoalValue, longGoalValue],
   );
 
   const getDefaultClassName = useCallback(
