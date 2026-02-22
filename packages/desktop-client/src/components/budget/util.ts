@@ -177,6 +177,24 @@ export function getScrollbarWidth() {
   return Math.max(styles.scrollbarWidth - 2, 0);
 }
 
+export function monthFromSheetName(sheetName: string) {
+  if (!sheetName) {
+    return '';
+  }
+
+  const prefix = 'budget';
+  if (!sheetName.startsWith(prefix)) {
+    return sheetName;
+  }
+
+  const raw = sheetName.slice(prefix.length);
+  if (raw.length === 6) {
+    return raw.slice(0, 4) + '-' + raw.slice(4);
+  }
+
+  return raw;
+}
+
 export async function prewarmMonth(
   budgetType: SyncedPrefs['budgetType'],
   spreadsheet: ReturnType<typeof useSpreadsheet>,

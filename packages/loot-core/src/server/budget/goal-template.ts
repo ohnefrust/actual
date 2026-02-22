@@ -9,7 +9,11 @@ import { batchMessages } from '../sync';
 
 import { getSheetValue, isReflectBudget, setBudget, setGoal } from './actions';
 import { CategoryTemplateContext } from './category-template-context';
-import { checkTemplateNotes, storeNoteTemplates } from './template-notes';
+import {
+  checkTemplateNotes,
+  getCategoriesWithTemplates,
+  storeNoteTemplates,
+} from './template-notes';
 
 type Notification = {
   type?: 'message' | 'error' | 'warning' | undefined;
@@ -153,7 +157,7 @@ type TemplateBudget = {
 async function setBudgets(month: string, templateBudget: TemplateBudget[]) {
   await batchMessages(async () => {
     templateBudget.forEach(element => {
-      void setBudget({
+      setBudget({
         category: element.category,
         month,
         amount: element.budgeted,
@@ -171,7 +175,7 @@ type TemplateGoal = {
 async function setGoals(month: string, templateGoal: TemplateGoal[]) {
   await batchMessages(async () => {
     templateGoal.forEach(element => {
-      void setGoal({
+      setGoal({
         month,
         category: element.category,
         goal: element.goal,
@@ -240,17 +244,7 @@ async function processTemplate(
     }
   }
 
-  //break early if nothing to do, or there are errors
-  if (templateContexts.length === 0 && errors.length === 0) {
-    if (goalList.length > 0) {
-      void setGoals(month, goalList);
-    }
-    return {
-      type: 'message',
-      message: 'Everything is up to date',
-    };
-  }
-  if (errors.length > 0) {
+  if (errors.length > 0 || templateContexts.length === 0) {
     return {
       sticky: true,
       message: 'There were errors interpreting some templates:',

@@ -79,13 +79,12 @@ export function useCreateCategoryMutation() {
       isIncome,
       isHidden,
     }: CreateCategoryPayload) => {
-      const id = await send('category-create', {
+      return send('category-create', {
         name,
         groupId,
         isIncome,
         hidden: isHidden,
       });
-      return id;
     },
     onSuccess: () => invalidateQueries(queryClient),
     onError: error => {
@@ -304,8 +303,7 @@ export function useCreateCategoryGroupMutation() {
 
   return useMutation({
     mutationFn: async ({ name }: CreateCategoryGroupPayload) => {
-      const id = await send('category-group-create', { name });
-      return id;
+      return send('category-group-create', { name });
     },
     onSuccess: () => invalidateQueries(queryClient),
     onError: error => {
@@ -649,11 +647,20 @@ type ApplyBudgetActionPayload =
       args: {
         category: CategoryEntity['id'];
       };
+    }
+  | {
+      type: 'set-single-category-template';
+      month: string;
+      args: {
+        category: CategoryEntity['id'];
+        amount: number | null;
+      };
     };
 
 export function useBudgetActions() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ month, type, args }: ApplyBudgetActionPayload) => {
@@ -777,6 +784,13 @@ export function useBudgetActions() {
             month,
             category: args.category,
           });
+          return null;
+        case 'set-single-category-template':
+          await send('budget/set-single-category-template', {
+            categoryId: args.category,
+            amount: args.amount,
+          });
+          invalidateQueries(queryClient);
           return null;
         default:
           throw new Error(`Unknown budget action type: ${type}`);
