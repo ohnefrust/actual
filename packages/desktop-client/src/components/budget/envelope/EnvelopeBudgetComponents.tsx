@@ -1,4 +1,4 @@
-import React, { memo, useRef } from 'react';
+import React, { memo, useMemo, useRef, useState } from 'react';
 import type { ComponentProps, CSSProperties } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -16,6 +16,7 @@ import { View } from '@actual-app/components/view';
 import { css } from '@emotion/css';
 
 import * as monthUtils from 'loot-core/shared/months';
+import { integerToAmount } from 'loot-core/shared/util';
 
 import type { CategoryGroupMonthProps, CategoryMonthProps } from '..';
 
@@ -24,22 +25,31 @@ import { BudgetMenu } from './BudgetMenu';
 import { IncomeMenu } from './IncomeMenu';
 
 import { BalanceWithCarryover } from '@desktop-client/components/budget/BalanceWithCarryover';
-import { makeAmountGrey } from '@desktop-client/components/budget/util';
+import {
+  makeAmountGrey,
+  monthFromSheetName,
+} from '@desktop-client/components/budget/util';
 import {
   CellValue,
   CellValueText,
 } from '@desktop-client/components/spreadsheet/CellValue';
-import { Field, Row, SheetCell } from '@desktop-client/components/table';
+import { Field, InputCell, Row, SheetCell } from '@desktop-client/components/table';
 import type { SheetCellProps } from '@desktop-client/components/table';
 import { useCategoryScheduleGoalTemplateIndicator } from '@desktop-client/hooks/useCategoryScheduleGoalTemplateIndicator';
 import { useContextMenu } from '@desktop-client/hooks/useContextMenu';
+import { useFeatureFlag } from '@desktop-client/hooks/useFeatureFlag';
 import { useFormat } from '@desktop-client/hooks/useFormat';
 import { useNavigate } from '@desktop-client/hooks/useNavigate';
 import { useSheetName } from '@desktop-client/hooks/useSheetName';
 import { useSheetValue } from '@desktop-client/hooks/useSheetValue';
 import { useUndo } from '@desktop-client/hooks/useUndo';
+import { useCategories } from '@desktop-client/hooks/useCategories';
 import type { Binding, SheetFields } from '@desktop-client/spreadsheet';
 import { envelopeBudget } from '@desktop-client/spreadsheet/bindings';
+import {
+  useTemplateGoal,
+  useTemplateGoalsForMonth,
+} from '@desktop-client/components/budget/TemplateGoalContext';
 
 export function useEnvelopeSheetName<
   FieldName extends SheetFields<'envelope-budget'>,
@@ -78,7 +88,87 @@ const cellStyle: CSSProperties = {
   fontWeight: 600,
 };
 
+type TemplateAmountCellProps = {
+  value: number | null;
+  onSave: (value: number | null) => void;
+};
+
+function TemplateAmountCell({ value, onSave }: TemplateAmountCellProps) {
+  const [editing, setEditing] = useState(false);
+  const format = useFormat();
+
+  return (
+    <InputCell
+      name="template"
+      width="flex"
+      textAlign="right"
+      exposed={editing}
+      focused={editing}
+      onExpose={() => setEditing(true)}
+      onBlur={() => setEditing(false)}
+      value={value != null ? format.forEdit(value) : ''}
+      formatter={rawValue =>
+        rawValue === '' ? '' : format(rawValue, 'financial')
+      }
+      onUpdate={rawValue => {
+        const integerAmount = format.fromEdit(rawValue, null);
+        const amount =
+          integerAmount === null
+            ? null
+            : integerToAmount(integerAmount, format.currency.decimalPlaces);
+        const existingAmount =
+          value === null
+            ? null
+            : integerToAmount(value, format.currency.decimalPlaces);
+
+        if (amount !== existingAmount) {
+          onSave(amount);
+        }
+        setEditing(false);
+      }}
+      valueStyle={{
+        cursor: 'default',
+        margin: 1,
+        padding: '0 4px',
+        borderRadius: 4,
+        ':hover': {
+          boxShadow: 'inset 0 0 0 1px ' + theme.pageTextSubdued,
+          backgroundColor: theme.budgetCurrentMonth,
+        },
+      }}
+      inputProps={{
+        style: {
+          backgroundColor: theme.budgetCurrentMonth,
+        },
+      }}
+      style={{ ...styles.tnum }}
+    />
+  );
+}
+
 export const BudgetTotalsMonth = memo(function BudgetTotalsMonth() {
+  const isGoalTemplatesEnabled = useFeatureFlag('goalTemplatesEnabled');
+  const format = useFormat();
+  const { sheetName } = useEnvelopeSheetName(envelopeBudget.totalBudgeted);
+  const month = monthFromSheetName(sheetName);
+  const templateGoals = useTemplateGoalsForMonth(month);
+  const { data: { grouped: categoryGroups = [] } = { grouped: [] } } =
+    useCategories();
+
+  const templateTotal = useMemo(() => {
+    const values = categoryGroups
+      .filter(group => !group.is_income)
+      .flatMap(group => group.categories || [])
+      .map(category => templateGoals[category.id])
+      .filter(value => value != null);
+
+    if (values.length === 0) {
+      return null;
+    }
+
+    return values.reduce((sum, value) => sum + value, 0);
+  }, [categoryGroups, templateGoals]);
+
   return (
     <View
       style={{
@@ -90,6 +180,16 @@ export const BudgetTotalsMonth = memo(function BudgetTotalsMonth() {
         backgroundColor: theme.budgetCurrentMonth,
       }}
     >
+      {isGoalTemplatesEnabled && (
+        <View style={headerLabelStyle}>
+          <Text style={{ color: theme.tableHeaderText }}>
+            <Trans>Template</Trans>
+          </Text>
+          <Text style={{ ...cellStyle, ...styles.tnum }}>
+            {templateTotal != null ? format(templateTotal, 'financial') : ''}
+          </Text>
+        </View>
+      )}
       <View style={headerLabelStyle}>
         <Text style={{ color: theme.tableHeaderText }}>
           <Trans>Budgeted</Trans>
@@ -148,6 +248,20 @@ export const ExpenseGroupMonth = memo(function ExpenseGroupMonth({
   group,
 }: CategoryGroupMonthProps) {
   const { id } = group;
+  const isGoalTemplatesEnabled = useFeatureFlag('goalTemplatesEnabled');
+  const format = useFormat();
+  const templateGoals = useTemplateGoalsForMonth(month);
+  const templateTotal = useMemo(() => {
+    const values = (group.categories || [])
+      .map(category => templateGoals[category.id])
+      .filter(value => value != null);
+
+    if (values.length === 0) {
+      return null;
+    }
+
+    return values.reduce((sum, value) => sum + value, 0);
+  }, [group.categories, templateGoals]);
 
   return (
     <View
@@ -159,6 +273,15 @@ export const ExpenseGroupMonth = memo(function ExpenseGroupMonth({
           : theme.budgetHeaderOtherMonth,
       }}
     >
+      {isGoalTemplatesEnabled && (
+        <Field
+          name="template"
+          width="flex"
+          style={{ fontWeight: 600, textAlign: 'right', ...styles.tnum }}
+        >
+          {templateTotal != null ? format(templateTotal, 'financial') : ''}
+        </Field>
+      )}
       <EnvelopeSheetCell
         name="budgeted"
         width="flex"
@@ -207,6 +330,8 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
 }: CategoryMonthProps) {
   const { t } = useTranslation();
   const format = useFormat();
+  const isGoalTemplatesEnabled = useFeatureFlag('goalTemplatesEnabled');
+  const templateValue = useTemplateGoal(category.id, month);
 
   const budgetMenuTriggerRef = useRef(null);
   const balanceMenuTriggerRef = useRef(null);
@@ -269,6 +394,20 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
         },
       }}
     >
+      {isGoalTemplatesEnabled && (
+        <TemplateAmountCell
+          value={templateValue}
+          onSave={amount => {
+            onBudgetAction(month, 'set-single-category-template', {
+              category: category.id,
+              amount,
+            });
+            showUndoNotification({
+              message: t('Template updated.'),
+            });
+          }}
+        />
+      )}
       <View
         ref={budgetMenuTriggerRef}
         style={{

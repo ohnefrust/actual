@@ -9,7 +9,11 @@ import { batchMessages } from '../sync';
 
 import { getSheetValue, isReflectBudget, setBudget, setGoal } from './actions';
 import { CategoryTemplateContext } from './category-template-context';
-import { checkTemplateNotes, storeNoteTemplates } from './template-notes';
+import {
+  checkTemplateNotes,
+  getCategoriesWithTemplates,
+  storeNoteTemplates,
+} from './template-notes';
 
 type Notification = {
   type?: 'message' | 'error' | 'warning' | undefined;
@@ -49,8 +53,7 @@ export async function applyTemplate({
 }): Promise<Notification> {
   await storeNoteTemplates();
   const categoryTemplates = await getTemplates();
-  const ret = await processTemplate(month, false, categoryTemplates, []);
-  return ret;
+  return processTemplate(month, false, categoryTemplates, []);
 }
 
 export async function overwriteTemplate({
@@ -60,8 +63,7 @@ export async function overwriteTemplate({
 }): Promise<Notification> {
   await storeNoteTemplates();
   const categoryTemplates = await getTemplates();
-  const ret = await processTemplate(month, true, categoryTemplates, []);
-  return ret;
+  return processTemplate(month, true, categoryTemplates, []);
 }
 
 export async function applyMultipleCategoryTemplates({
@@ -78,13 +80,7 @@ export async function applyMultipleCategoryTemplates({
   );
   await storeNoteTemplates();
   const categoryTemplates = await getTemplates(c => categoryIds.includes(c.id));
-  const ret = await processTemplate(
-    month,
-    true,
-    categoryTemplates,
-    categoryData,
-  );
-  return ret;
+  return processTemplate(month, true, categoryTemplates, categoryData);
 }
 
 export async function applySingleCategoryTemplate({
@@ -99,13 +95,41 @@ export async function applySingleCategoryTemplate({
   );
   await storeNoteTemplates();
   const categoryTemplates = await getTemplates(c => c.id === category);
-  const ret = await processTemplate(
-    month,
-    true,
-    categoryTemplates,
-    categoryData,
-  );
-  return ret;
+  return processTemplate(month, true, categoryTemplates, categoryData);
+}
+
+export async function setSingleCategoryTemplate({
+  categoryId,
+  amount,
+}: {
+  categoryId: CategoryEntity['id'];
+  amount: number | null;
+}): Promise<void> {
+  if (amount === null) {
+    await db.updateWithSchema('categories', {
+      id: categoryId,
+      goal_def: null,
+      template_settings: { source: 'ui' },
+    });
+    return;
+  }
+
+  await storeTemplates({
+    categoriesWithTemplates: [
+      {
+        id: categoryId,
+        templates: [
+          {
+            directive: 'template',
+            type: 'simple',
+            monthly: amount,
+            priority: 1,
+          },
+        ],
+      },
+    ],
+    source: 'ui',
+  });
 }
 
 export function runCheckTemplates() {
@@ -117,6 +141,23 @@ async function getCategories(): Promise<CategoryEntity[]> {
     await aqlQuery(q('category_groups').filter({ hidden: false }).select('*'));
 
   return categoryGroups.flatMap(g => g.categories || []).filter(c => !c.hidden);
+}
+
+async function getUICategoryTemplates(
+  filter: (category: CategoryEntity) => boolean = () => true,
+): Promise<Record<CategoryEntity['id'], Template[]>> {
+  const { data: categories }: { data: CategoryEntity[] } = await aqlQuery(
+    q('categories').select('*'),
+  );
+
+  const categoryTemplates: Record<CategoryEntity['id'], Template[]> = {};
+  for (const category of categories.filter(filter)) {
+    if (category.template_settings?.source !== 'ui' || !category.goal_def) {
+      continue;
+    }
+    categoryTemplates[category.id] = JSON.parse(category.goal_def);
+  }
+  return categoryTemplates;
 }
 
 async function getTemplates(
@@ -136,6 +177,24 @@ async function getTemplates(
       categoryWithGoalDef.goal_def,
     );
   }
+  return categoryTemplates;
+}
+
+async function getPreviewTemplates(
+  categoryIdSet: Set<CategoryEntity['id']> | null = null,
+): Promise<Record<CategoryEntity['id'], Template[]>> {
+  const filter = (category: CategoryEntity) =>
+    !categoryIdSet || categoryIdSet.has(category.id);
+
+  const categoryTemplates = await getUICategoryTemplates(filter);
+  const noteTemplates = await getCategoriesWithTemplates();
+
+  for (const { id, templates } of noteTemplates) {
+    if (!categoryIdSet || categoryIdSet.has(id)) {
+      categoryTemplates[id] = templates;
+    }
+  }
+
   return categoryTemplates;
 }
 
@@ -181,12 +240,19 @@ async function setGoals(month: string, templateGoal: TemplateGoal[]) {
   });
 }
 
-async function processTemplate(
+type TemplateEvaluation = {
+  errors: string[];
+  budgetList: TemplateBudget[];
+  goalList: TemplateGoal[];
+  templateContextsLength: number;
+};
+
+async function evaluateTemplate(
   month: string,
   force: boolean,
   categoryTemplates: Record<CategoryEntity['id'], Template[]>,
   categories: CategoryEntity[] = [],
-): Promise<Notification> {
+): Promise<TemplateEvaluation> {
   // setup categories
   const isReflect = isReflectBudget();
   if (!categories.length) {
@@ -240,21 +306,12 @@ async function processTemplate(
     }
   }
 
-  //break early if nothing to do, or there are errors
-  if (templateContexts.length === 0 && errors.length === 0) {
-    if (goalList.length > 0) {
-      setGoals(month, goalList);
-    }
+  if (errors.length > 0 || templateContexts.length === 0) {
     return {
-      type: 'message',
-      message: 'Everything is up to date',
-    };
-  }
-  if (errors.length > 0) {
-    return {
-      sticky: true,
-      message: 'There were errors interpreting some templates:',
-      pre: errors.join(`\n\n`),
+      errors,
+      budgetList,
+      goalList,
+      templateContextsLength: templateContexts.length,
     };
   }
 
@@ -299,11 +356,88 @@ async function processTemplate(
       longGoal: values.longGoal ? 1 : null,
     });
   });
+
+  return {
+    errors,
+    budgetList,
+    goalList,
+    templateContextsLength: templateContexts.length,
+  };
+}
+
+async function processTemplate(
+  month: string,
+  force: boolean,
+  categoryTemplates: Record<CategoryEntity['id'], Template[]>,
+  categories: CategoryEntity[] = [],
+): Promise<Notification> {
+  const { errors, budgetList, goalList, templateContextsLength } =
+    await evaluateTemplate(month, force, categoryTemplates, categories);
+
+  //break early if nothing to do, or there are errors
+  if (templateContextsLength === 0 && errors.length === 0) {
+    if (goalList.length > 0) {
+      await setGoals(month, goalList);
+    }
+    return {
+      type: 'message',
+      message: 'Everything is up to date',
+    };
+  }
+
+  if (errors.length > 0) {
+    return {
+      sticky: true,
+      message: 'There were errors interpreting some templates:',
+      pre: errors.join(`\n\n`),
+    };
+  }
+
   await setBudgets(month, budgetList);
   await setGoals(month, goalList);
 
   return {
     type: 'message',
-    message: `Successfully applied templates to ${templateContexts.length} categories`,
+    message: `Successfully applied templates to ${templateContextsLength} categories`,
   };
+}
+
+export async function getTemplateGoalPreview({
+  month,
+  categoryIds,
+}: {
+  month: string;
+  categoryIds?: Array<CategoryEntity['id']>;
+}): Promise<Record<CategoryEntity['id'], number | null>> {
+  const categoryIdSet = categoryIds ? new Set(categoryIds) : null;
+  const categoryTemplates = await getPreviewTemplates(categoryIdSet);
+
+  let categoryData: CategoryEntity[] = [];
+  if (categoryIds?.length) {
+    const { data }: { data: CategoryEntity[] } = await aqlQuery(
+      q('categories')
+        .filter({ id: { $oneof: categoryIds } })
+        .select('*'),
+    );
+    categoryData = data;
+  }
+
+  const { errors, goalList } = await evaluateTemplate(
+    month,
+    true,
+    categoryTemplates,
+    categoryData,
+  );
+
+  if (errors.length > 0) {
+    return {};
+  }
+
+  return goalList.reduce(
+    (preview, { category, goal }) => {
+      preview[category] = goal;
+      return preview;
+    },
+    {} as Record<CategoryEntity['id'], number | null>,
+  );
 }

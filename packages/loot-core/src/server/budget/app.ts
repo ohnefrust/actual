@@ -32,6 +32,7 @@ export type BudgetHandlers = {
   'budget/apply-multiple-templates': typeof goalActions.applyMultipleCategoryTemplates;
   'budget/overwrite-goal-template': typeof goalActions.overwriteTemplate;
   'budget/apply-single-template': typeof goalActions.applySingleCategoryTemplate;
+  'budget/set-single-category-template': typeof goalActions.setSingleCategoryTemplate;
   'budget/cleanup-goal-template': typeof cleanupActions.cleanupTemplate;
   'budget/hold-for-next-month': typeof actions.holdForNextMonth;
   'budget/reset-hold': typeof actions.resetHold;
@@ -59,6 +60,7 @@ export type BudgetHandlers = {
   'budget/set-category-automations': typeof goalActions.storeTemplates;
   'budget/store-note-templates': typeof goalNoteActions.storeNoteTemplates;
   'budget/render-note-templates': typeof goalNoteActions.unparse;
+  'budget/get-template-goals': typeof goalActions.getTemplateGoalPreview;
 };
 
 export const app = createApp<BudgetHandlers>();
@@ -96,6 +98,10 @@ app.method(
 app.method(
   'budget/apply-single-template',
   mutator(undoable(goalActions.applySingleCategoryTemplate)),
+);
+app.method(
+  'budget/set-single-category-template',
+  mutator(undoable(goalActions.setSingleCategoryTemplate)),
 );
 app.method(
   'budget/cleanup-goal-template',
@@ -158,6 +164,7 @@ app.method(
   mutator(goalNoteActions.storeNoteTemplates),
 );
 app.method('budget/render-note-templates', goalNoteActions.unparse);
+app.method('budget/get-template-goals', goalActions.getTemplateGoalPreview);
 
 // Server must return AQL entities not the raw DB data
 async function getCategories() {

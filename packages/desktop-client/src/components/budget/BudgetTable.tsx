@@ -16,6 +16,7 @@ import { BudgetSummaries } from './BudgetSummaries';
 import { BudgetTotals } from './BudgetTotals';
 import { MonthsProvider } from './MonthsContext';
 import type { MonthBounds } from './MonthsContext';
+import { TemplateGoalProvider } from './TemplateGoalContext';
 import {
   findSortDown,
   findSortUp,
@@ -26,6 +27,7 @@ import {
 import type { DropPosition } from '@desktop-client/components/sort';
 import { SchedulesProvider } from '@desktop-client/hooks/useCachedSchedules';
 import { useCategories } from '@desktop-client/hooks/useCategories';
+import { useFeatureFlag } from '@desktop-client/hooks/useFeatureFlag';
 import { useGlobalPref } from '@desktop-client/hooks/useGlobalPref';
 import { useLocalPref } from '@desktop-client/hooks/useLocalPref';
 
@@ -80,6 +82,7 @@ export function BudgetTable(props: BudgetTableProps) {
   const [showHiddenCategories, setShowHiddenCategoriesPef] = useLocalPref(
     'budget.showHiddenCategories',
   );
+  const isGoalTemplatesEnabled = useFeatureFlag('goalTemplatesEnabled');
   const [categoryExpandedStatePref] = useGlobalPref('categoryExpandedState');
   const categoryExpandedState = categoryExpandedStatePref ?? 0;
   const [editing, setEditing] = useState<{ id: string; cell: string } | null>(
@@ -172,7 +175,6 @@ export function BudgetTable(props: BudgetTableProps) {
 
         if ('isGroup' in next && next.isGroup) {
           nextIdx += dir;
-          continue;
         } else if (
           type === 'tracking' ||
           ('is_income' in next && !next.is_income)
@@ -257,52 +259,58 @@ export function BudgetTable(props: BudgetTableProps) {
         </MonthsProvider>
       </View>
 
-      <MonthsProvider
+      <TemplateGoalProvider
+        enabled={isGoalTemplatesEnabled}
         startMonth={startMonth}
         numMonths={numMonths}
-        monthBounds={monthBounds}
-        type={type}
       >
-        <BudgetTotals
-          toggleHiddenCategories={toggleHiddenCategories}
-          expandAllCategories={expandAllCategories}
-          collapseAllCategories={collapseAllCategories}
-        />
-        <View
-          style={{
-            overflowY: 'scroll',
-            overflowAnchor: 'none',
-            flex: 1,
-            paddingLeft: 5,
-            paddingRight: 5,
-          }}
+        <MonthsProvider
+          startMonth={startMonth}
+          numMonths={numMonths}
+          monthBounds={monthBounds}
+          type={type}
         >
+          <BudgetTotals
+            toggleHiddenCategories={toggleHiddenCategories}
+            expandAllCategories={expandAllCategories}
+            collapseAllCategories={collapseAllCategories}
+          />
           <View
             style={{
-              flexShrink: 0,
+              overflowY: 'scroll',
+              overflowAnchor: 'none',
+              flex: 1,
+              paddingLeft: 5,
+              paddingRight: 5,
             }}
-            onKeyDown={onKeyDown}
           >
-            <SchedulesProvider query={schedulesQuery}>
-              <BudgetCategories
-                categoryGroups={categoryGroups}
-                editingCell={editing}
-                onEditMonth={onEditMonth}
-                onEditName={onEditName}
-                onSaveCategory={onSaveCategory}
-                onSaveGroup={onSaveGroup}
-                onDeleteCategory={onDeleteCategory}
-                onDeleteGroup={onDeleteGroup}
-                onReorderCategory={_onReorderCategory}
-                onReorderGroup={_onReorderGroup}
-                onBudgetAction={onBudgetAction}
-                onShowActivity={onShowActivity}
-                onApplyBudgetTemplatesInGroup={onApplyBudgetTemplatesInGroup}
-              />
-            </SchedulesProvider>
+            <View
+              style={{
+                flexShrink: 0,
+              }}
+              onKeyDown={onKeyDown}
+            >
+              <SchedulesProvider query={schedulesQuery}>
+                <BudgetCategories
+                  categoryGroups={categoryGroups}
+                  editingCell={editing}
+                  onEditMonth={onEditMonth}
+                  onEditName={onEditName}
+                  onSaveCategory={onSaveCategory}
+                  onSaveGroup={onSaveGroup}
+                  onDeleteCategory={onDeleteCategory}
+                  onDeleteGroup={onDeleteGroup}
+                  onReorderCategory={_onReorderCategory}
+                  onReorderGroup={_onReorderGroup}
+                  onBudgetAction={onBudgetAction}
+                  onShowActivity={onShowActivity}
+                  onApplyBudgetTemplatesInGroup={onApplyBudgetTemplatesInGroup}
+                />
+              </SchedulesProvider>
+            </View>
           </View>
-        </View>
-      </MonthsProvider>
+        </MonthsProvider>
+      </TemplateGoalProvider>
     </View>
   );
 }

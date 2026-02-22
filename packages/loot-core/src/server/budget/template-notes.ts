@@ -27,7 +27,7 @@ export async function storeNoteTemplates(): Promise<void> {
   await resetCategoryGoalDefsWithNoTemplates();
 }
 
-type CategoryWithTemplateNotes = {
+export type CategoryWithTemplateNotes = {
   id: string;
   name: string;
   templates: Template[];
@@ -71,7 +71,7 @@ export async function checkTemplateNotes(): Promise<Notification> {
   };
 }
 
-async function getCategoriesWithTemplates(): Promise<
+export async function getCategoriesWithTemplates(): Promise<
   CategoryWithTemplateNotes[]
 > {
   const templatesForCategory: CategoryWithTemplateNotes[] = [];
@@ -97,6 +97,7 @@ async function getCategoriesWithTemplates(): Promise<
       try {
         const parsedTemplate: Template = parse(trimmedLine);
 
+        let validationError: string | null = null;
         // Validate schedule adjustments
         if (
           (parsedTemplate.type === 'average' ||
@@ -108,16 +109,23 @@ async function getCategoriesWithTemplates(): Promise<
               parsedTemplate.adjustment <= -100 ||
               parsedTemplate.adjustment > 1000
             ) {
-              throw new Error(
-                `Invalid adjustment percentage (${parsedTemplate.adjustment}%). Must be between -100% and 1000%`,
-              );
+              validationError = `Invalid adjustment percentage (${parsedTemplate.adjustment}%). Must be between -100% and 1000%`;
             }
           } else if (parsedTemplate.adjustmentType === 'fixed') {
-            //placeholder for potential validation of amount/fixed adjustments
+            // placeholder for potential validation of amount/fixed adjustments
           }
         }
 
-        parsedTemplates.push(parsedTemplate);
+        if (validationError) {
+          parsedTemplates.push({
+            type: 'error',
+            directive: 'error',
+            line,
+            error: validationError,
+          });
+        } else {
+          parsedTemplates.push(parsedTemplate);
+        }
       } catch (e: unknown) {
         parsedTemplates.push({
           type: 'error',
@@ -249,8 +257,7 @@ export async function unparse(templates: Template[]): Promise<string> {
         }
         case 'copy': {
           // #template copy from <lookBack> months ago [limit]
-          const result = `${prefix} copy from ${template.lookBack} months ago`;
-          return result;
+          return `${prefix} copy from ${template.lookBack} months ago`;
         }
         case 'limit': {
           if (!refill) {
