@@ -149,6 +149,72 @@ export async function getTemplatesForCategory(
   return getTemplates(c => c.id === categoryId);
 }
 
+export async function setSingleCategoryTemplate({
+  categoryId,
+  amount,
+}: {
+  categoryId: CategoryEntity['id'];
+  amount: number | null;
+}): Promise<void> {
+  if (amount === null) {
+    // Clear template by removing goal_def and template_settings
+    await db.updateWithSchema('categories', {
+      id: categoryId,
+      goal_def: null,
+      template_settings: null,
+    });
+    return;
+  }
+
+  const templates: Template[] = [
+    {
+      type: 'simple',
+      monthly: amount,
+      directive: 'template',
+      priority: 0,
+    },
+  ];
+
+  await storeTemplates({
+    categoriesWithTemplates: [{ id: categoryId, templates }],
+    source: 'ui',
+  });
+}
+
+export async function getTemplateGoalPreview({
+  month,
+}: {
+  month: string;
+}): Promise<Record<CategoryEntity['id'], number | null>> {
+  await storeNoteTemplates();
+  const categoryTemplates = await getTemplates();
+  const categories = await getCategories();
+  const result: Record<CategoryEntity['id'], number | null> = {};
+
+  for (const category of categories) {
+    const templates = categoryTemplates[category.id];
+    if (!templates) {
+      continue;
+    }
+
+    try {
+      const templateContext = await CategoryTemplateContext.init(
+        templates,
+        category,
+        month,
+        0,
+      );
+      await templateContext.runAll(Infinity);
+      const values = templateContext.getValues();
+      result[category.id] = values.goal;
+    } catch {
+      // Skip categories with template errors
+    }
+  }
+
+  return result;
+}
+
 type TemplateBudget = {
   category: CategoryEntity['id'];
   budgeted: number;
