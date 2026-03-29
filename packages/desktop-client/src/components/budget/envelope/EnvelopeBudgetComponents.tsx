@@ -385,10 +385,13 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
   const balance = useEnvelopeSheetValue(envelopeBudget.catBalance(category.id));
   const budgetedAmount = budgeted ?? 0;
   const spentAmount = Math.abs(spent ?? 0);
-  const templateAmount = templateValue ?? 0;
+  // preserve null for BalanceWithCarryover
+  const templateGoalOverride = templateValue;
+  // fallback to 0 only for CategoryProgressBar
+  const templateAmountForProgressBar = templateValue ?? 0;
   const isUnderfunded =
-    templateAmount > 0 &&
-    budgetedAmount < templateAmount &&
+    templateGoalOverride != null &&
+    budgetedAmount < templateGoalOverride &&
     spentAmount <= budgetedAmount;
 
   const progressBarEnabled = useFeatureFlag('goalTemplatesEnabled');
@@ -683,7 +686,7 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
             goal={envelopeBudget.catGoal(category.id)}
             budgeted={envelopeBudget.catBudgeted(category.id)}
             longGoal={envelopeBudget.catLongGoal(category.id)}
-            goalOverride={templateAmount}
+            goalOverride={templateGoalOverride} // new: preserves null
             balanceColorOverride={
               isUnderfunded ? theme.templateNumberUnderFunded : null
             }
@@ -722,7 +725,7 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
             assigned={budgeted ?? 0}
             activity={spent ?? 0}
             balance={balance ?? 0}
-            template={templateAmount}
+            template={templateAmountForProgressBar} // new: 0 fallback only for progress bar
           />
         </View>
       )}

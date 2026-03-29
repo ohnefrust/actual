@@ -256,8 +256,18 @@ export async function unparse(templates: Template[]): Promise<string> {
           return result;
         }
         case 'copy': {
-          // #template copy from <lookBack> months ago [limit]
-          return `${prefix} copy from ${template.lookBack} months ago`;
+          // `#template` copy from <lookBack> months ago [limit]
+          let result = `${prefix} copy from ${template.lookBack} months ago`;
+          if (
+            'limit' in template &&
+            template.limit &&
+            typeof template.limit === 'object' &&
+            'amount' in template.limit &&
+            'hold' in template.limit
+          ) {
+            result += ` ${limitToString(template.limit as { amount: number; hold: boolean; period?: 'daily' | 'weekly' | 'monthly'; start?: string })}`;
+          }
+          return result;
         }
         case 'limit': {
           if (!refill) {

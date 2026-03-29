@@ -149,6 +149,7 @@ export async function getTemplatesForCategory(
   return getTemplates(c => c.id === categoryId);
 }
 
+
 export async function setSingleCategoryTemplate({
   categoryId,
   amount,
@@ -163,6 +164,10 @@ export async function setSingleCategoryTemplate({
       goal_def: null,
       template_settings: null,
     });
+
+    // Also remove note-backed template so note sync won't overwrite
+    await storeNoteTemplates();
+
     return;
   }
 
@@ -175,12 +180,16 @@ export async function setSingleCategoryTemplate({
     },
   ];
 
+  // Store in category fields
   await storeTemplates({
     categoriesWithTemplates: [{ id: categoryId, templates }],
     source: 'ui',
   });
-}
 
+  // Also update note-backed template so note sync won't overwrite
+  await storeNoteTemplates();
+}
+///
 export async function getTemplateGoalPreview({
   month,
 }: {
