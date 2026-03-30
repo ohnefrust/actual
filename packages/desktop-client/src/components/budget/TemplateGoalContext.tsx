@@ -11,6 +11,7 @@ import { send } from 'loot-core/platform/client/connection';
 import * as monthUtils from 'loot-core/shared/months';
 
 import { useCategories } from '@desktop-client/hooks/useCategories';
+import { useSyncedPref } from '@desktop-client/hooks/useSyncedPref';
 
 type TemplateGoalsByCategory = Record<string, number | null>;
 type TemplateGoalsByMonth = Record<string, TemplateGoalsByCategory>;
@@ -33,6 +34,7 @@ export function TemplateGoalProvider({
   const { data: { list: categories = [] } = { list: [] } } = useCategories();
   const [templateGoalsByMonth, setTemplateGoalsByMonth] =
     useState<TemplateGoalsByMonth>({});
+  const [currentSheet] = useSyncedPref('selectedSheet' as any);
 
   const months = useMemo(
     () =>
@@ -41,12 +43,12 @@ export function TemplateGoalProvider({
       ),
     [numMonths, startMonth],
   );
-  const categoryTemplateFingerprint = useMemo(
+  const templateGoalFingerprint = useMemo(
     () =>
       categories
         .map(
           category =>
-            `${category.id}:${category.template_settings?.source || ''}:${category.goal_def || ''}`,
+            `${category.id}:${category.template_settings?.source || ''}:${category.goal_def || ''}:${category.last_month_leftover || ''}:${category.carryover || ''}`
         )
         .join('|'),
     [categories],
@@ -93,7 +95,7 @@ export function TemplateGoalProvider({
     return () => {
       mounted = false;
     };
-  }, [enabled, months, categoryTemplateFingerprint]);
+  }, [enabled, months, templateGoalFingerprint, currentSheet]);
 
   return (
     <TemplateGoalContext.Provider value={templateGoalsByMonth}>

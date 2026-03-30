@@ -151,11 +151,7 @@ export function CategoryProgressBar({
     const percent = Math.round(
       (progress.spentRatio + progress.overflowRatio) * 100,
     );
-    tooltipParts.push(
-      template && template > 0
-        ? `${percent}% of template spent`
-        : `${percent}% of budget spent`,
-    );
+    tooltipParts.push(`${percent}% of budget spent`);
   }
   if (template && template > 0) {
     tooltipParts.push(`Template: ${format(template, 'financial')}`);
