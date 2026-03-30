@@ -149,9 +149,9 @@ export function CategoryProgressBar({
   const tooltipParts: string[] = [];
   if (progress.baselineAmount > 0) {
     const percent = Math.round(
-      (progress.spentRatio + progress.overflowRatio) * 100,
-    );
-    tooltipParts.push(`${percent}% of budget spent`);
+     (progress.spentRatio + progress.overflowRatio) * 100,
+   );
+    tooltipParts.push(`${percent}% of goal reached`);
   }
   if (template && template > 0) {
     tooltipParts.push(`Template: ${format(template, 'financial')}`);
