@@ -148,10 +148,20 @@ export function CategoryProgressBar({
   // Compute tooltip text
   const tooltipParts: string[] = [];
   if (progress.baselineAmount > 0) {
-    const percent = Math.round(
-     (progress.spentRatio + progress.overflowRatio) * 100,
-   );
-    tooltipParts.push(`${percent}% of goal reached`);
+    // Use the baseline amount as the effective goal
+    const effectiveGoal = progress.baselineAmount;
+
+    // Include spent and any overflow
+    const totalProgress = progress.spentRatio + progress.overflowRatio;
+
+    // Only compute if effectiveGoal > 0
+    const percent =
+      effectiveGoal > 0
+        ? Math.round(totalProgress * 100)
+        : 0; // fallback to 0% if somehow baseline is zero
+
+      // Show percentage, even if > 100% for overspending
+      tooltipParts.push(`${percent}% of goal reached`);
   }
   if (template && template > 0) {
     tooltipParts.push(`Template: ${format(template, 'financial')}`);
