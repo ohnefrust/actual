@@ -15,15 +15,20 @@ const migrationsDir = path.join(
   'loot-core',
   'migrations',
 );
+const repoRoot = spawnSync('git', ['rev-parse', '--show-toplevel'])
+  .stdout.toString()
+  .trim();
+const migrationsRel = path.relative(repoRoot, migrationsDir);
 
 function readMigrations(ref) {
   const { stdout } = spawnSync('git', [
     'ls-tree',
     '--name-only',
     ref,
-    migrationsDir + '/',
+    migrationsRel + '/',
   ]);
-  const files = stdout.toString().split('\n').filter(Boolean);
+  const output = stdout.toString().trim();
+  const files = output ? output.split('\n').filter(Boolean) : [];
   console.log(`Found ${files.length} migrations on ${ref}.`);
   return files
     .map(file => path.basename(file))
@@ -37,9 +42,9 @@ function readMigrations(ref) {
 spawnSync('git', ['fetch', 'origin', 'master']);
 const masterMigrations = readMigrations('origin/master');
 const headMigrations = readMigrations('HEAD');
-
 const latestMasterMigration =
-  masterMigrations[masterMigrations.length - 1].date;
+  masterMigrations[masterMigrations.length - 1]?.date ?? -Infinity;
+
 const newMigrations = headMigrations.filter(
   migration => !masterMigrations.find(m => m.name === migration.name),
 );

@@ -118,7 +118,7 @@ global.Actual = {
       ],
     };
 
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       let createdElement = false;
       // Attempt to reuse an already-created file input.
       let input = document.body.querySelector(
@@ -153,22 +153,27 @@ global.Actual = {
 
       input.onchange = e => {
         const file = e.target.files[0];
-        const filename = file.name.replace(/.*(\.[^.]*)/, 'file$1');
 
-        if (file) {
-          const reader = new FileReader();
-          reader.readAsArrayBuffer(file);
-          reader.onload = async function (ev) {
-            const filepath = `/uploads/${filename}`;
-
-            void window.__actionsForMenu
-              .uploadFile(filename, ev.target.result)
-              .then(() => resolve([filepath]));
-          };
-          reader.onerror = function () {
-            alert('Error reading file');
-          };
+        if (!file) {
+          resolve([]);
+          return;
         }
+
+        const filename = file.name.replace(/.*(\.[^.]*)/, 'file$1');
+        const reader = new FileReader();
+        reader.readAsArrayBuffer(file);
+        reader.onload = function (ev) {
+          const filepath = `/uploads/${filename}`;
+
+          void window.__actionsForMenu
+            .uploadFile(filename, ev.target.result)
+            .then(() => resolve([filepath]))
+            .catch(reject);
+        };
+        reader.onerror = function () {
+          alert('Error reading file');
+          reject(new Error('Error reading file'));
+        };
       };
 
       // In Safari the file input has to be in the DOM for change events to

@@ -4,8 +4,6 @@ import type { CSSProperties } from 'react';
 import { styles } from '@actual-app/components/styles';
 import { theme } from '@actual-app/components/theme';
 
-import { integerToAmount } from 'loot-core/shared/util';
-
 import { InputCell } from '@desktop-client/components/table';
 import { useFormat } from '@desktop-client/hooks/useFormat';
 
@@ -38,17 +36,9 @@ export function TemplateAmountCell({
       }
       onUpdate={rawValue => {
         const integerAmount = format.fromEdit(rawValue, null);
-        const amount =
-          integerAmount === null
-            ? null
-            : integerToAmount(integerAmount, format.currency.decimalPlaces);
-        const existingAmount =
-          value === null
-            ? null
-            : integerToAmount(value, format.currency.decimalPlaces);
 
-        if (amount !== existingAmount) {
-          onSave(amount);
+        if (integerAmount !== value) {
+          onSave(integerAmount);
         }
         setEditing(false);
       }}
