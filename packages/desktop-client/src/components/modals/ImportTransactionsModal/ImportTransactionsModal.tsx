@@ -452,14 +452,30 @@ export function ImportTransactionsModal({
   }
 
   async function onNewFile() {
-    const res = await window.Actual.openFileDialog({
-      filters: [
-        {
-          name: 'Financial Files',
-          extensions: ['qif', 'ofx', 'qfx', 'csv', 'tsv', 'xml'],
-        },
-      ],
-    });
+    let res;
+    try {
+      res = await window.Actual.openFileDialog({
+        filters: [
+          {
+            name: 'Financial Files',
+            extensions: ['qif', 'ofx', 'qfx', 'csv', 'tsv', 'xml'],
+          },
+        ],
+      });
+    } catch (error) {
+      setError({
+        parsed: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'There was a problem opening the selected file.',
+      });
+      return;
+    }
+
+    if (!res?.length) {
+      return;
+    }
 
     const fileType = getFileType(res[0]);
     const parseOptions = getParseOptions(fileType, {

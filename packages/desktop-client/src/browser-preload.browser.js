@@ -171,7 +171,6 @@ global.Actual = {
             .catch(reject);
         };
         reader.onerror = function () {
-          alert('Error reading file');
           reject(new Error('Error reading file'));
         };
       };

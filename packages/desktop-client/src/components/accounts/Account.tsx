@@ -582,14 +582,30 @@ class AccountInternal extends PureComponent<
     const account = this.props.accounts.find(acct => acct.id === accountId);
 
     if (account) {
-      const res = await window.Actual.openFileDialog({
-        filters: [
-          {
-            name: t('Financial files'),
-            extensions: ['qif', 'ofx', 'qfx', 'csv', 'tsv', 'xml'],
-          },
-        ],
-      });
+      let res;
+      try {
+        res = await window.Actual.openFileDialog({
+          filters: [
+            {
+              name: t('Financial files'),
+              extensions: ['qif', 'ofx', 'qfx', 'csv', 'tsv', 'xml'],
+            },
+          ],
+        });
+      } catch (error) {
+        this.props.dispatch(
+          addNotification({
+            notification: {
+              type: 'error',
+              message:
+                error instanceof Error
+                  ? error.message
+                  : t('There was a problem opening the selected file.'),
+            },
+          }),
+        );
+        return;
+      }
 
       if (res) {
         if (accountId && res?.length > 0) {
