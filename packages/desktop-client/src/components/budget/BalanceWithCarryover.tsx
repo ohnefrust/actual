@@ -225,7 +225,7 @@ export function BalanceWithCarryover({
               <div>
                 {
                   {
-                    amount: format(goalValue, 'financial'),
+                    amount: format(resolvedGoalValue, 'financial'),
                   } as TransObjectLiteral
                 }
               </div>

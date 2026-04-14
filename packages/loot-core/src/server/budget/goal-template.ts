@@ -231,13 +231,15 @@ type TemplateBudget = {
 
 async function setBudgets(month: string, templateBudget: TemplateBudget[]) {
   await batchMessages(async () => {
-    templateBudget.forEach(element => {
-      setBudget({
-        category: element.category,
-        month,
-        amount: element.budgeted,
-      });
-    });
+    await Promise.all(
+      templateBudget.map(element =>
+        setBudget({
+          category: element.category,
+          month,
+          amount: element.budgeted,
+        }),
+      ),
+    );
   });
 }
 
@@ -249,14 +251,16 @@ type TemplateGoal = {
 
 async function setGoals(month: string, templateGoal: TemplateGoal[]) {
   await batchMessages(async () => {
-    templateGoal.forEach(element => {
-      setGoal({
-        month,
-        category: element.category,
-        goal: element.goal,
-        long_goal: element.longGoal,
-      });
-    });
+    await Promise.all(
+      templateGoal.map(element =>
+        setGoal({
+          month,
+          category: element.category,
+          goal: element.goal,
+          long_goal: element.longGoal,
+        }),
+      ),
+    );
   });
 }
 
@@ -319,11 +323,17 @@ async function processTemplate(
     }
   }
 
-  if (errors.length > 0 || templateContexts.length === 0) {
+  if (errors.length > 0) {
     return {
       sticky: true,
       message: 'There were errors interpreting some templates:',
       pre: errors.join(`\n\n`),
+    };
+  }
+
+  if (templateContexts.length === 0) {
+    return {
+      message: 'Everything is up to date',
     };
   }
 

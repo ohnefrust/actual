@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useRef, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import type { ComponentProps, CSSProperties } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -16,7 +16,6 @@ import { View } from '@actual-app/components/view';
 import { css } from '@emotion/css';
 
 import * as monthUtils from 'loot-core/shared/months';
-import { integerToAmount } from 'loot-core/shared/util';
 
 import type { CategoryGroupMonthProps, CategoryMonthProps } from '..';
 
@@ -26,6 +25,7 @@ import { IncomeMenu } from './IncomeMenu';
 
 import { BalanceWithCarryover } from '@desktop-client/components/budget/BalanceWithCarryover';
 import { CategoryProgressBar } from '@desktop-client/components/budget/CategoryProgressBar';
+import { TemplateAmountCell } from '@desktop-client/components/budget/TemplateAmountCell';
 import {
   makeAmountGrey,
   monthFromSheetName,
@@ -95,65 +95,6 @@ const cellStyle: CSSProperties = {
   color: theme.tableHeaderText,
   fontWeight: 600,
 };
-
-type TemplateAmountCellProps = {
-  value: number | null;
-  onSave: (value: number | null) => void;
-  style?: CSSProperties;
-};
-
-function TemplateAmountCell({ value, onSave, style }: TemplateAmountCellProps) {
-  const [editing, setEditing] = useState(false);
-  const format = useFormat();
-
-  return (
-    <InputCell
-      name="template"
-      width="flex"
-      textAlign="right"
-      exposed={editing}
-      focused={editing}
-      onExpose={() => setEditing(true)}
-      onBlur={() => setEditing(false)}
-      value={value != null ? format.forEdit(value) : ''}
-      formatter={rawValue =>
-        rawValue === '' ? '' : format(rawValue, 'financial')
-      }
-      onUpdate={rawValue => {
-        const integerAmount = format.fromEdit(rawValue, null);
-        const amount =
-          integerAmount === null
-            ? null
-            : integerToAmount(integerAmount, format.currency.decimalPlaces);
-        const existingAmount =
-          value === null
-            ? null
-            : integerToAmount(value, format.currency.decimalPlaces);
-
-        if (amount !== existingAmount) {
-          onSave(amount);
-        }
-        setEditing(false);
-      }}
-      valueStyle={{
-        cursor: 'default',
-        margin: 1,
-        padding: '0 4px',
-        borderRadius: 4,
-        ':hover': {
-          boxShadow: 'inset 0 0 0 1px ' + theme.pageTextSubdued,
-          backgroundColor: theme.budgetCurrentMonth,
-        },
-      }}
-      inputProps={{
-        style: {
-          backgroundColor: theme.budgetCurrentMonth,
-        },
-      }}
-      style={{ ...styles.tnum, ...(style || null) }}
-    />
-  );
-}
 
 export const BudgetTotalsMonth = memo(function BudgetTotalsMonth() {
   const isGoalTemplatesEnabled = useFeatureFlag('goalTemplatesEnabled');
@@ -437,20 +378,20 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
     >
       <View style={rowContainerStyle}>
         {isGoalTemplatesEnabled && (
-        <TemplateAmountCell
-          value={templateValue}
-          onSave={amount => {
-            onBudgetAction(month, 'set-single-category-template', {
-              category: category.id,
-              amount,
-            });
-            showUndoNotification({
-              message: t('Template updated.'),
-            });
-          }}
-          style={rowCellStyle || undefined}
-        />
-      )}
+          <TemplateAmountCell
+            value={templateValue}
+            onSave={amount => {
+              onBudgetAction(month, 'set-single-category-template', {
+                category: category.id,
+                amount,
+              });
+              showUndoNotification({
+                message: t('Template updated.'),
+              });
+            }}
+            style={rowCellStyle || undefined}
+          />
+        )}
         <View
           ref={budgetMenuTriggerRef}
           style={{

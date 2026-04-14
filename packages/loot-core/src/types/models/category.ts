@@ -1,8 +1,8 @@
 import type { CategoryGroupEntity } from './category-group';
 
 export type CategoryEntity = {
-  last_month_leftover: string;
-  carryover: string;
+  last_month_leftover?: string;
+  carryover?: string;
   id: string;
   name: string;
   is_income?: boolean;

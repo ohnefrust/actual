@@ -650,7 +650,6 @@ type ApplyBudgetActionPayload =
     }
   | {
       type: 'set-single-category-template';
-      month: string;
       args: {
         category: CategoryEntity['id'];
         amount: number | null;
@@ -662,56 +661,72 @@ export function useBudgetActions() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
+  const getMonth = (payload: ApplyBudgetActionPayload): string => {
+    if ('month' in payload && payload.month !== undefined) {
+      return payload.month;
+    }
+
+    throw new Error(`Budget action ${payload.type} does not include a month.`);
+  };
+
   return useMutation({
-    mutationFn: async ({ month, type, args }: ApplyBudgetActionPayload) => {
+    mutationFn: async (payload: ApplyBudgetActionPayload) => {
+      const { type, args } = payload;
+
       switch (type) {
         case 'budget-amount':
           await send('budget/budget-amount', {
-            month,
+            month: getMonth(payload),
             category: args.category,
             amount: args.amount,
           });
           return null;
         case 'copy-last':
-          await send('budget/copy-previous-month', { month });
+          await send('budget/copy-previous-month', { month: getMonth(payload) });
           return null;
         case 'set-zero':
-          await send('budget/set-zero', { month });
+          await send('budget/set-zero', { month: getMonth(payload) });
           return null;
         case 'set-3-avg':
-          await send('budget/set-3month-avg', { month });
+          await send('budget/set-3month-avg', { month: getMonth(payload) });
           return null;
         case 'set-6-avg':
-          await send('budget/set-6month-avg', { month });
+          await send('budget/set-6month-avg', { month: getMonth(payload) });
           return null;
         case 'set-12-avg':
-          await send('budget/set-12month-avg', { month });
+          await send('budget/set-12month-avg', { month: getMonth(payload) });
           return null;
         case 'check-templates':
           return await send('budget/check-templates');
         case 'apply-goal-template':
-          return await send('budget/apply-goal-template', { month });
+          return await send('budget/apply-goal-template', {
+            month: getMonth(payload),
+          });
         case 'overwrite-goal-template':
-          return await send('budget/overwrite-goal-template', { month });
+          return await send('budget/overwrite-goal-template', {
+            month: getMonth(payload),
+          });
         case 'apply-single-category-template':
           return await send('budget/apply-single-template', {
-            month,
+            month: getMonth(payload),
             category: args.category,
           });
         case 'cleanup-goal-template':
-          return await send('budget/cleanup-goal-template', { month });
+          return await send('budget/cleanup-goal-template', {
+            month: getMonth(payload),
+          });
         case 'hold':
           await send('budget/hold-for-next-month', {
-            month,
+            month: getMonth(payload),
             amount: args.amount,
           });
           return null;
         case 'reset-hold':
-          await send('budget/reset-hold', { month });
+          await send('budget/reset-hold', { month: getMonth(payload) });
           return null;
         case 'cover-overspending':
           await send('budget/cover-overspending', {
-            month,
+            month: getMonth(payload),
             to: args.to,
             from: args.from,
             amount: args.amount,
@@ -720,14 +735,14 @@ export function useBudgetActions() {
           return null;
         case 'transfer-available':
           await send('budget/transfer-available', {
-            month,
+            month: getMonth(payload),
             amount: args.amount,
             category: args.category,
           });
           return null;
         case 'cover-overbudgeted':
           await send('budget/cover-overbudgeted', {
-            month,
+            month: getMonth(payload),
             category: args.category,
             amount: args.amount,
             currencyCode: args.currencyCode,
@@ -735,7 +750,7 @@ export function useBudgetActions() {
           return null;
         case 'transfer-category':
           await send('budget/transfer-category', {
-            month,
+            month: getMonth(payload),
             amount: args.amount,
             from: args.from,
             to: args.to,
@@ -744,44 +759,46 @@ export function useBudgetActions() {
           return null;
         case 'carryover': {
           await send('budget/set-carryover', {
-            startMonth: month,
+            startMonth: getMonth(payload),
             category: args.category,
             flag: args.flag,
           });
           return null;
         }
         case 'reset-income-carryover':
-          await send('budget/reset-income-carryover', { month });
+          await send('budget/reset-income-carryover', {
+            month: getMonth(payload),
+          });
           return null;
         case 'apply-multiple-templates':
           return await send('budget/apply-multiple-templates', {
-            month,
+            month: getMonth(payload),
             categoryIds: args.categories,
           });
         case 'set-single-3-avg':
           await send('budget/set-n-month-avg', {
-            month,
+            month: getMonth(payload),
             N: 3,
             category: args.category,
           });
           return null;
         case 'set-single-6-avg':
           await send('budget/set-n-month-avg', {
-            month,
+            month: getMonth(payload),
             N: 6,
             category: args.category,
           });
           return null;
         case 'set-single-12-avg':
           await send('budget/set-n-month-avg', {
-            month,
+            month: getMonth(payload),
             N: 12,
             category: args.category,
           });
           return null;
         case 'copy-single-last':
           await send('budget/copy-single-month', {
-            month,
+            month: getMonth(payload),
             category: args.category,
           });
           return null;
