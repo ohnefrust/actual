@@ -9,11 +9,7 @@ import { batchMessages } from '../sync';
 
 import { getSheetValue, isReflectBudget, setBudget, setGoal } from './actions';
 import { CategoryTemplateContext } from './category-template-context';
-import {
-  checkTemplateNotes,
-  getCategoriesWithTemplates,
-  storeNoteTemplates,
-} from './template-notes';
+import { checkTemplateNotes, storeNoteTemplates } from './template-notes';
 
 type Notification = {
   type?: 'message' | 'error' | 'warning' | undefined;
@@ -149,7 +145,6 @@ export async function getTemplatesForCategory(
   return getTemplates(c => c.id === categoryId);
 }
 
-
 export async function setSingleCategoryTemplate({
   categoryId,
   amount,
@@ -158,15 +153,12 @@ export async function setSingleCategoryTemplate({
   amount: number | null;
 }): Promise<void> {
   if (amount === null) {
-    // Clear template by removing goal_def and template_settings
+    // Keep the UI source marker so note-backed templates are not re-imported.
     await db.updateWithSchema('categories', {
       id: categoryId,
       goal_def: null,
-      template_settings: null,
+      template_settings: { source: 'ui' },
     });
-
-    // Also remove note-backed template so note sync won't overwrite
-    await storeNoteTemplates();
 
     return;
   }
@@ -185,17 +177,13 @@ export async function setSingleCategoryTemplate({
     categoriesWithTemplates: [{ id: categoryId, templates }],
     source: 'ui',
   });
-
-  // Also update note-backed template so note sync won't overwrite
-  await storeNoteTemplates();
 }
-///
+
 export async function getTemplateGoalPreview({
   month,
 }: {
   month: string;
 }): Promise<Record<CategoryEntity['id'], number | null>> {
-  await storeNoteTemplates();
   const categoryTemplates = await getTemplates();
   const categories = await getCategories();
   const result: Record<CategoryEntity['id'], number | null> = {};
@@ -332,6 +320,10 @@ async function processTemplate(
   }
 
   if (templateContexts.length === 0) {
+    if (goalList.length > 0) {
+      await setGoals(month, goalList);
+    }
+
     return {
       message: 'Everything is up to date',
     };

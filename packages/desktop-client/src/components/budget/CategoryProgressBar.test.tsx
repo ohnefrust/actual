@@ -224,6 +224,21 @@ describe('computeCategoryProgress', () => {
       expect(result.spentRatio).toBe(1.0);
       expect(result.overflowRatio).toBeCloseTo(0.1);
     });
+
+    it('should be underfunded when template exists but nothing is budgeted or spent', () => {
+      const result = computeCategoryProgress({
+        assigned: 0,
+        activity: 0,
+        balance: 0,
+        template: 25000,
+      });
+
+      expect(result.state).toBe('underfunded');
+      expect(result.baselineAmount).toBe(25000);
+      expect(result.budgetedRatio).toBe(0);
+      expect(result.spentRatio).toBe(0);
+      expect(result.overflowRatio).toBe(0);
+    });
   });
 });
 
@@ -240,6 +255,19 @@ describe('CategoryProgressBar rendering', () => {
     vi.mocked(useFeatureFlag).mockReturnValue(true);
     const { container } = render(
       <CategoryProgressBar assigned={10000} activity={-3000} balance={7000} />,
+    );
+    expect(container.firstChild).not.toBeNull();
+  });
+
+  it('renders an empty underfunded bar when template exists but nothing is budgeted or spent', () => {
+    vi.mocked(useFeatureFlag).mockReturnValue(true);
+    const { container } = render(
+      <CategoryProgressBar
+        assigned={0}
+        activity={0}
+        balance={0}
+        template={25000}
+      />,
     );
     expect(container.firstChild).not.toBeNull();
   });

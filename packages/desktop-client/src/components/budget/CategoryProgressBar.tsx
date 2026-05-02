@@ -48,6 +48,17 @@ export function computeCategoryProgress(
   // No budget case
   if (assigned <= 0) {
     if (spent <= 0) {
+      if (hasTemplate) {
+        return {
+          baselineAmount: template,
+          spentRatio: 0,
+          budgetedRatio: 0,
+          overflowRatio: 0,
+          remaining: balance,
+          state: 'underfunded',
+        };
+      }
+
       return {
         baselineAmount: 0,
         spentRatio: 0,
@@ -155,13 +166,10 @@ export function CategoryProgressBar({
     const totalProgress = progress.spentRatio + progress.overflowRatio;
 
     // Only compute if effectiveGoal > 0
-    const percent =
-      effectiveGoal > 0
-        ? Math.round(totalProgress * 100)
-        : 0; // fallback to 0% if somehow baseline is zero
+    const percent = effectiveGoal > 0 ? Math.round(totalProgress * 100) : 0; // fallback to 0% if somehow baseline is zero
 
-      // Show percentage, even if > 100% for overspending
-      tooltipParts.push(`${percent}% of goal reached`);
+    // Show percentage, even if > 100% for overspending
+    tooltipParts.push(`${percent}% of goal reached`);
   }
   if (template && template > 0) {
     tooltipParts.push(`Template: ${format(template, 'financial')}`);
